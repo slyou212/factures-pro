@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Factures Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f11;--bg2:#1a1a1f;--bg3:#242429;--border:#2e2e36;
+  --text:#f0eff4;--muted:#7a7a8a;--accent:#6c63ff;--accent2:#a78bfa;
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--r:16px;--r2:12px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+.phone{width:100%;max-width:390px;min-height:700px;background:var(--bg);border-radius:32px;border:1px solid var(--border);overflow:hidden;position:relative;box-shadow:0 0 0 8px #111,0 40px 80px rgba(0,0,0,.6);}
+.screen{display:none;flex-direction:column;min-height:700px;padding:32px 24px 40px;animation:fadeIn .25s ease;}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:40px;}
+.logo-mark{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#fff;}
+.logo-text{font-size:13px;font-weight:500;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+.pin-title{font-size:26px;font-weight:600;line-height:1.2;margin-bottom:6px}
+.pin-sub{font-size:14px;color:var(--muted);margin-bottom:40px}
+.pin-dots{display:flex;gap:16px;justify-content:center;margin-bottom:48px}
+.dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .15s;}
+.dot.filled{background:var(--accent);border-color:var(--accent);transform:scale(1.1)}
+.dot.error{background:var(--red);border-color:var(--red)}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.key{height:60px;border-radius:var(--r2);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:20px;font-family:'DM Mono',monospace;font-weight:500;cursor:pointer;transition:all .1s;display:flex;align-items:center;justify-content:center;}
+.key:active{background:var(--accent);border-color:var(--accent);transform:scale(.96)}
+.key.del{font-size:14px;color:var(--muted)}
+.key.empty{background:transparent;border-color:transparent;pointer-events:none}
+.pin-error{text-align:center;font-size:13px;color:var(--red);margin-top:-32px;margin-bottom:16px;opacity:0;transition:opacity .2s;}
+.pin-error.show{opacity:1}
+.admin-link{position:absolute;bottom:28px;right:28px;font-size:11px;color:rgba(255,255,255,.12);cursor:pointer;letter-spacing:.04em;user-select:none;transition:color .2s;}
+.admin-link:hover{color:rgba(255,255,255,.35)}
+.screen-title{font-size:22px;font-weight:600;margin-bottom:6px}
+.screen-sub{font-size:14px;color:var(--muted);margin-bottom:32px}
+.soc-list{display:flex;flex-direction:column;gap:10px;flex:1}
+.soc-btn{padding:18px 20px;border-radius:var(--r);background:var(--bg2);border:1.5px solid var(--border);color:var(--text);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;transition:all .15s;}
+.soc-btn:active,.soc-btn:hover{border-color:var(--accent);background:rgba(108,99,255,.08)}
+.soc-btn .arrow{color:var(--muted);font-size:18px}
+.soc-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;color:var(--accent2);margin-bottom:28px;}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r);padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:200px;position:relative;overflow:hidden;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(108,99,255,.04)}
+.upload-zone.has-img{border-style:solid;border-color:var(--accent);padding:0}
+.upload-zone img.preview{width:100%;height:100%;object-fit:cover;border-radius:14px;max-height:220px;}
+.upload-icon{font-size:40px;opacity:.4}
+.upload-label{font-size:15px;font-weight:500}
+.upload-hint{font-size:12px;color:var(--muted)}
+.upload-hint span{color:var(--accent2)}
+.mode-tabs{display:flex;gap:8px;margin-bottom:20px}
+.tab{flex:1;padding:10px;border-radius:var(--r2);background:var(--bg3);border:1px solid var(--border);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;text-align:center;}
+.tab.active{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.4);color:var(--accent2)}
+.btn-main{margin-top:20px;width:100%;padding:16px;border-radius:var(--r);background:var(--accent);border:none;color:#fff;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-main:hover{background:#5a52e8}
+.btn-main:active{transform:scale(.97)}
+.btn-main:disabled{opacity:.4;pointer-events:none}
+.btn-ghost{margin-top:12px;width:100%;padding:14px;border-radius:var(--r);background:transparent;border:1px solid var(--border);color:var(--muted);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;}
+.btn-ghost:hover{border-color:var(--muted);color:var(--text)}
+input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.steps{display:flex;flex-direction:column;gap:16px;flex:1;margin-top:8px}
+.step{display:flex;align-items:center;gap:16px;padding:16px;border-radius:var(--r2);background:var(--bg2);border:1px solid var(--border);transition:all .3s;}
+.step.active{border-color:rgba(108,99,255,.4);background:rgba(108,99,255,.06)}
+.step.done{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05)}
+.step-icon{width:40px;height:40px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.step.active .step-icon{background:rgba(108,99,255,.2)}
+.step.done .step-icon{background:rgba(34,197,94,.15)}
+.step-content{flex:1}
+.step-name{font-size:14px;font-weight:500}
+.step-status{font-size:12px;color:var(--muted);margin-top:2px}
+.step.active .step-status{color:var(--accent2)}
+.step.done .step-status{color:var(--green)}
+.spinner{width:18px;height:18px;border:2px solid rgba(108,99,255,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.result-row:last-child{border-bottom:none}
+.result-label{font-size:13px;color:var(--muted)}
+.result-value{font-size:14px;font-weight:500}
+.result-value.green{color:var(--green)}
+.result-value.amber{color:var(--amber)}
+.badge-soc{background:rgba(108,99,255,.15);color:var(--accent2);font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;}
+.success-header{text-align:center;padding:24px 0 8px;}
+.success-icon{font-size:48px;display:block;margin-bottom:12px}
+.success-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.success-sub{font-size:14px;color:var(--muted)}
+.back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:24px;width:fit-content;background:none;border:none;font-family:'DM Sans',sans-serif;}
+.back:hover{color:var(--text)}
+.admin-header{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.admin-badge{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:rgba(245,158,11,.15);color:var(--amber);padding:4px 10px;border-radius:20px;}
+.admin-section{margin-bottom:24px;}
+.admin-label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.admin-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.admin-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.admin-row:last-child{border-bottom:none}
+.admin-row-label{font-size:14px;font-weight:500}
+.admin-row-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.btn-edit{padding:6px 14px;border-radius:8px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);color:var(--accent2);font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;}
+.btn-edit:hover{background:rgba(108,99,255,.2)}
+.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;border-radius:32px;}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;width:calc(100% - 48px);animation:fadeIn .2s ease;}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.input-field{width:100%;padding:12px 14px;border-radius:var(--r2);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:15px;font-family:'DM Mono',monospace;letter-spacing:.12em;outline:none;transition:border-color .15s;}
+.input-field:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;margin-top:16px;}
+.modal-actions button{flex:1;padding:12px;border-radius:var(--r2);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;}
+.btn-confirm{background:var(--accent);border:none;color:#fff;}
+.btn-confirm:hover{background:#5a52e8}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-cancel:hover{border-color:var(--muted);color:var(--text)}
+.modal-msg{font-size:12px;margin-top:8px;min-height:16px;transition:opacity .2s;}
+.modal-msg.ok{color:var(--green)}
+.modal-msg.err{color:var(--red)}
+.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r2);padding:12px 16px;font-size:13px;color:var(--red);margin-top:12px;display:none;}
+.error-box.show{display:block}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- PIN SALARIÉ -->
+<div class="screen active" id="s-pin">
+  <div class="logo"><div class="logo-mark">F</div><div class="logo-text">Factures Pro</div></div>
+  <div class="pin-title">Bonjour 👋<br>Entrez votre PIN</div>
+  <div class="pin-sub">Accès réservé aux salariés</div>
+  <div class="pin-dots" id="dots">
+    <div class="dot" id="d0"></div><div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div><div class="dot" id="d3"></div>
+  </div>
+  <div class="pin-error" id="pin-error">Code PIN incorrect</div>
+  <div class="numpad">
+    <button class="key" onclick="pressKey('1','sal')">1</button>
+    <button class="key" onclick="pressKey('2','sal')">2</button>
+    <button class="key" onclick="pressKey('3','sal')">3</button>
+    <button class="key" onclick="pressKey('4','sal')">4</button>
+    <button class="key" onclick="pressKey('5','sal')">5</button>
+    <button class="key" onclick="pressKey('6','sal')">6</button>
+    <button class="key" onclick="pressKey('7','sal')">7</button>
+    <button class="key" onclick="pressKey('8','sal')">8</button>
+    <button class="key" onclick="pressKey('9','sal')">9</button>
+    <div class="key empty"></div>
+    <button class="key" onclick="pressKey('0','sal')">0</button>
+    <button class="key del" onclick="delKey('sal')">⌫</button>
+  </div>
+  <div class="admin-link" onclick="goTo('s-admin-pin')">Admin</div>
+</div>
+
+<!-- PIN ADMIN -->
+<div class="screen" id="s-admin-pin">
+  <div class="logo"><div class="logo-mark" style="background:var(--amber)">A</div><div class="logo-text">Accès Admin</div></div>
+  <div class="pin-title">PIN Administrateur</div>
+  <div class="pin-sub">Entrez votre code admin à 4 chiffres</div>
+  <div class="pin-dots" id="adots">
+    <div class="dot" id="ad0"></div><div class="dot" id="ad1"></div>
+    <div class="dot" id="ad2"></div><div class="dot" id="ad3"></div>
+  </div>
+  <div class="pin-error" id="admin-pin-error">Code admin incorrect</div>
+  <div class="numpad">
+    <button class="key" onclick="pressKey('1','adm')">1</button>
+    <button class="key" onclick="pressKey('2','adm')">2</button>
+    <button class="key" onclick="pressKey('3','adm')">3</button>
+    <button class="key" onclick="pressKey('4','adm')">4</button>
+    <button class="key" onclick="pressKey('5','adm')">5</button>
+    <button class="key" onclick="pressKey('6','adm')">6</button>
+    <button class="key" onclick="pressKey('7','adm')">7</button>
+    <button class="key" onclick="pressKey('8','adm')">8</button>
+    <button class="key" onclick="pressKey('9','adm')">9</button>
+    <div class="key empty"></div>
+    <button class="key" onclick="pressKey('0','adm')">0</button>
+    <button class="key del" onclick="delKey('adm')">⌫</button>
+  </div>
+  <button class="btn-ghost" style="margin-top:24px" onclick="goTo('s-pin')">← Retour</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="screen" id="s-admin">
+  <div class="admin-header">
+    <div class="logo-mark" style="background:var(--amber);width:32px;height:32px;font-size:14px">A</div>
+    <div><div style="font-size:15px;font-weight:600">Panneau Admin</div><div style="font-size:12px;color:var(--muted)">Factures Pro</div></div>
+    <div style="margin-left:auto"><span class="admin-badge">Admin</span></div>
+  </div>
+  <div class="admin-section">
+    <div class="admin-label">Codes PIN</div>
+    <div class="admin-card">
+      <div class="admin-row">
+        <div><div class="admin-row-label">PIN Salarié</div><div class="admin-row-sub">●●●● (4 chiffres)</div></div>
+        <button class="btn-edit" onclick="openModal('sal')">Modifier</button>
+      </div>
+      <div class="admin-row">
+        <div><div class="admin-row-label">PIN Admin</div><div class="admin-row-sub">●●●● (4 chiffres)</div></div>
+        <button class="btn-edit" onclick="openModal('adm')">Modifier</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-section">
+    <div class="admin-label">Sociétés actives</div>
+    <div class="admin-card" id="soc-admin-list"></div>
+  </div>
+  <button class="btn-ghost" onclick="goTo('s-pin')">← Retour à l'accueil</button>
+</div>
+
+<!-- CHOIX SOCIÉTÉ -->
+<div class="screen" id="s-soc">
+  <div class="logo"><div class="logo-mark">F</div><div class="logo-text">Factures Pro</div></div>
+  <div class="screen-title">Pour quelle société ?</div>
+  <div class="screen-sub">Sélectionnez avant de scanner</div>
+  <div class="soc-list" id="soc-list-btns"></div>
+</div>
+
+<!-- SCAN -->
+<div class="screen" id="s-scan">
+  <div class="logo"><div class="logo-mark">F</div><div class="logo-text">Factures Pro</div></div>
+  <button class="back" onclick="goTo('s-soc')">← Changer de société</button>
+  <div class="screen-title">Déposer la facture</div>
+  <div class="soc-pill" id="soc-pill">● SINDIS MARKET</div>
+  <div class="mode-tabs">
+    <div class="tab active" onclick="setMode(this,'especes')">💵 Espèces</div>
+    <div class="tab" onclick="setMode(this,'carte')">💳 Carte bancaire</div>
+  </div>
+  <div class="upload-zone" id="upload-zone" onclick="triggerUpload()">
+    <input type="file" id="file-input" accept="image/*" capture="environment" onchange="handleFile(event)">
+    <div id="upload-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <div class="upload-icon">📷</div>
+      <div class="upload-label">Photographier la facture</div>
+      <div class="upload-hint">Ticket de caisse ou facture A4<br><span>Appuyez pour ouvrir l'appareil photo</span></div>
+    </div>
+    <img class="preview" id="preview-img" style="display:none" alt="aperçu">
+  </div>
+  <div class="error-box" id="scan-error"></div>
+  <button class="btn-main" id="btn-send" onclick="startProcess()" disabled>↑ &nbsp;Envoyer la facture</button>
+  <button class="btn-ghost" onclick="goTo('s-soc')">Annuler</button>
+</div>
+
+<!-- TRAITEMENT -->
+<div class="screen" id="s-process">
+  <div class="logo"><div class="logo-mark">F</div><div class="logo-text">Factures Pro</div></div>
+  <div class="screen-title">Traitement en cours…</div>
+  <div class="screen-sub">L'agent analyse la facture</div>
+  <div class="steps">
+    <div class="step active" id="step1"><div class="step-icon">🔍</div><div class="step-content"><div class="step-name">Lecture du document</div><div class="step-status">Analyse en cours…</div></div><div class="spinner"></div></div>
+    <div class="step" id="step2"><div class="step-icon">📊</div><div class="step-content"><div class="step-name">Extraction des données</div><div class="step-status">En attente</div></div></div>
+    <div class="step" id="step3"><div class="step-icon">🗂️</div><div class="step-content"><div class="step-name">Classement OneDrive</div><div class="step-status">En attente</div></div></div>
+    <div class="step" id="step4"><div class="step-icon">✅</div><div class="step-content"><div class="step-name">Prêt pour la comptabilité</div><div class="step-status">En attente</div></div></div>
+  </div>
+</div>
+
+<!-- RÉSULTAT -->
+<div class="screen" id="s-result">
+  <div class="success-header">
+    <span class="success-icon">✅</span>
+    <div class="success-title">Facture enregistrée !</div>
+    <div class="success-sub">Classée dans OneDrive avec succès</div>
+  </div>
+  <div class="result-card">
+    <div class="result-row"><span class="result-label">Société</span><span class="badge-soc" id="r-soc"></span></div>
+    <div class="result-row"><span class="result-label">Montant TTC</span><span class="result-value green" id="r-montant">—</span></div>
+    <div class="result-row"><span class="result-label">Date</span><span class="result-value" id="r-date">—</span></div>
+    <div class="result-row"><span class="result-label">TVA détectée</span><span class="result-value amber" id="r-tva">—</span></div>
+    <div class="result-row"><span class="result-label">Paiement</span><span class="result-value" id="r-mode">—</span></div>
+    <div class="result-row"><span class="result-label">Dossier OneDrive</span><span class="result-value" id="r-folder" style="font-size:12px;color:var(--accent2)"></span></div>
+  </div>
+  <button class="btn-main" onclick="newScan()">+ Nouvelle facture</button>
+  <button class="btn-ghost" onclick="goTo('s-soc')">Changer de société</button>
+</div>
+
+<!-- ERREUR -->
+<div class="screen" id="s-error">
+  <div class="success-header">
+    <span class="success-icon">❌</span>
+    <div class="success-title">Une erreur est survenue</div>
+    <div class="success-sub" id="error-msg">Veuillez réessayer</div>
+  </div>
+  <button class="btn-main" onclick="goTo('s-scan')" style="margin-top:40px">← Réessayer</button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Modifier le PIN</div>
+    <div class="modal-sub">Nouveau code à 4 chiffres</div>
+    <input class="input-field" type="password" inputmode="numeric" maxlength="4" id="modal-input" placeholder="●●●●" oninput="this.value=this.value.replace(/\D/g,'')">
+    <input class="input-field" type="password" inputmode="numeric" maxlength="4" id="modal-input2" placeholder="Confirmer ●●●●" style="margin-top:8px" oninput="this.value=this.value.replace(/\D/g,'')">
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-confirm" onclick="savePin()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── CONFIG (chargée depuis le serveur) ──
+let SAL_PIN = '1234';
+let ADM_PIN = '5678';
+let societies = ['STE SINDIS MARKET','SLIDIS MARKET','LIVRIZY','INDRE SHOP'];
+let enteredSal='', enteredAdm='', currentSoc='', currentMode='especes';
+let currentFile=null, modalTarget='';
+
+// Charger la config depuis le serveur
+fetch('/api/config').then(r=>r.json()).then(d=>{
+  if(d.sal_pin) SAL_PIN=d.sal_pin;
+  if(d.adm_pin) ADM_PIN=d.adm_pin;
+  if(d.societies) societies=d.societies;
+  renderSocList(); renderAdminSocList();
+}).catch(()=>{renderSocList();renderAdminSocList();});
+
+function renderSocList(){
+  document.getElementById('soc-list-btns').innerHTML=societies.map(s=>
+    `<button class="soc-btn" onclick="chooseSoc('${s}')"><span>${s}</span><span class="arrow">›</span></button>`
+  ).join('');
+}
+function renderAdminSocList(){
+  document.getElementById('soc-admin-list').innerHTML=societies.map((s,i)=>
+    `<div class="admin-row"><div><div class="admin-row-label">${s}</div></div><button class="btn-edit" onclick="renameSoc(${i})">Renommer</button></div>`
+  ).join('');
+}
+
+// ── PIN ──
+function pressKey(k,who){
+  if(who==='sal'){
+    if(enteredSal.length>=4)return;
+    enteredSal+=k; updateDots('sal');
+    if(enteredSal.length===4)checkPin('sal');
+  } else {
+    if(enteredAdm.length>=4)return;
+    enteredAdm+=k; updateDots('adm');
+    if(enteredAdm.length===4)checkPin('adm');
+  }
+}
+function delKey(who){
+  if(who==='sal'){enteredSal=enteredSal.slice(0,-1);document.getElementById('pin-error').classList.remove('show');updateDots('sal');}
+  else{enteredAdm=enteredAdm.slice(0,-1);document.getElementById('admin-pin-error').classList.remove('show');updateDots('adm');}
+}
+function updateDots(who,err=false){
+  const p=who==='sal'?'d':'ad', e=who==='sal'?enteredSal:enteredAdm;
+  for(let i=0;i<4;i++){const d=document.getElementById(p+i);d.className='dot';if(err)d.classList.add('error');else if(i<e.length)d.classList.add('filled');}
+}
+function checkPin(who){
+  if(who==='sal'){
+    if(enteredSal===SAL_PIN){setTimeout(()=>goTo('s-soc'),200);}
+    else{updateDots('sal',true);document.getElementById('pin-error').classList.add('show');setTimeout(()=>{enteredSal='';updateDots('sal');},700);}
+  } else {
+    if(enteredAdm===ADM_PIN){setTimeout(()=>goTo('s-admin'),200);}
+    else{updateDots('adm',true);document.getElementById('admin-pin-error').classList.add('show');setTimeout(()=>{enteredAdm='';updateDots('adm');},700);}
+  }
+}
+
+// ── NAVIGATION ──
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='s-pin'){enteredSal='';updateDots('sal');}
+  if(id==='s-admin-pin'){enteredAdm='';updateDots('adm');}
+}
+
+// ── MODAL PIN ──
+function openModal(target){
+  modalTarget=target;
+  document.getElementById('modal-title').textContent=target==='sal'?'Modifier le PIN salarié':'Modifier le PIN admin';
+  document.getElementById('modal-input').value='';
+  document.getElementById('modal-input2').value='';
+  document.getElementById('modal-msg').textContent='';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function savePin(){
+  const v1=document.getElementById('modal-input').value.trim();
+  const v2=document.getElementById('modal-input2').value.trim();
+  const msg=document.getElementById('modal-msg');
+  if(v1.length!==4||!/^\d{4}$/.test(v1)){msg.textContent='4 chiffres requis';msg.className='modal-msg err';return;}
+  if(v1!==v2){msg.textContent='Les codes ne correspondent pas';msg.className='modal-msg err';return;}
+  if(modalTarget==='sal'&&v1===ADM_PIN){msg.textContent='Déjà utilisé pour l\'admin';msg.className='modal-msg err';return;}
+  if(modalTarget==='adm'&&v1===SAL_PIN){msg.textContent='Déjà utilisé pour les salariés';msg.className='modal-msg err';return;}
+  if(modalTarget==='sal') SAL_PIN=v1; else ADM_PIN=v1;
+  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sal_pin:SAL_PIN,adm_pin:ADM_PIN,societies})});
+  msg.textContent='✓ Code mis à jour';msg.className='modal-msg ok';
+  setTimeout(closeModal,900);
+}
+function renameSoc(i){
+  const name=prompt('Nouveau nom pour "'+societies[i]+'" :');
+  if(name&&name.trim()){
+    societies[i]=name.trim().toUpperCase();
+    fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sal_pin:SAL_PIN,adm_pin:ADM_PIN,societies})});
+    renderSocList(); renderAdminSocList();
+  }
+}
+
+// ── SCAN ──
+function chooseSoc(name){
+  currentSoc=name;
+  document.getElementById('soc-pill').textContent='● '+name;
+  document.getElementById('r-soc').textContent=name;
+  const month=new Date().toISOString().slice(0,7);
+  const slug=name.replace(/\s+/g,'').toUpperCase().slice(0,8);
+  document.getElementById('r-folder').textContent='/Factures/'+slug+'/'+month;
+  goTo('s-scan');
+}
+function setMode(el,mode){
+  currentMode=mode;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('r-mode').textContent=mode==='especes'?'💵 Espèces':'💳 Carte bancaire';
+}
+function triggerUpload(){document.getElementById('file-input').click();}
+function handleFile(e){
+  const file=e.target.files[0]; if(!file)return;
+  currentFile=file;
+  const url=URL.createObjectURL(file);
+  const img=document.getElementById('preview-img');
+  img.src=url; img.style.display='block';
+  document.getElementById('upload-placeholder').style.display='none';
+  document.getElementById('upload-zone').classList.add('has-img');
+  document.getElementById('btn-send').disabled=false;
+  document.getElementById('scan-error').classList.remove('show');
+}
+
+// ── TRAITEMENT RÉEL ──
+async function startProcess(){
+  if(!currentFile) return;
+  goTo('s-process');
+  resetSteps();
+
+  try {
+    // Étape 1 : lecture IA
+    const formData = new FormData();
+    formData.append('image', currentFile);
+    formData.append('societe', currentSoc);
+    formData.append('mode_paiement', currentMode);
+
+    setStepActive(0);
+    const analyseRes = await fetch('/api/analyser', {method:'POST', body:formData});
+    if(!analyseRes.ok) throw new Error('Erreur analyse IA');
+    const data = await analyseRes.json();
+    setStepDone(0, 'Document lu avec succès');
+
+    // Étape 2 : données extraites
+    setStepActive(1);
+    document.getElementById('r-montant').textContent = data.montant || '—';
+    document.getElementById('r-date').textContent = data.date || '—';
+    document.getElementById('r-tva').textContent = data.tva || '—';
+    await sleep(600);
+    setStepDone(1, 'Montant, date, TVA extraits');
+
+    // Étape 3 : OneDrive
+    setStepActive(2);
+    const uploadRes = await fetch('/api/onedrive', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...data, societe:currentSoc, mode_paiement:currentMode, filename:currentFile.name})
+    });
+    if(!uploadRes.ok) throw new Error('Erreur OneDrive');
+    const uploadData = await uploadRes.json();
+    document.getElementById('r-folder').textContent = uploadData.path || '';
+    setStepDone(2, 'Déposé dans OneDrive');
+
+    // Étape 4 : fin
+    setStepActive(3);
+    await sleep(600);
+    setStepDone(3, "Prêt pour l'expert-comptable");
+    await sleep(400);
+    goTo('s-result');
+
+  } catch(err) {
+    document.getElementById('error-msg').textContent = err.message || 'Veuillez réessayer';
+    goTo('s-error');
+  }
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+const stepIcons=['🔍','📊','🗂️','✅'];
+const stepNames=['Lecture du document','Extraction des données','Classement OneDrive','Prêt pour la comptabilité'];
+
+function resetSteps(){
+  for(let i=0;i<4;i++){
+    const el=document.getElementById('step'+(i+1));
+    el.className='step';
+    el.querySelector('.step-icon').textContent=stepIcons[i];
+    el.querySelector('.step-name').textContent=stepNames[i];
+    el.querySelector('.step-status').textContent='En attente';
+    const sp=el.querySelector('.spinner'); if(sp) sp.remove();
+  }
+}
+function setStepActive(i){
+  const el=document.getElementById('step'+(i+1));
+  el.className='step active';
+  el.querySelector('.step-status').textContent=['Analyse IA en cours…','Extraction des données…','Envoi vers OneDrive…','Finalisation…'][i];
+  const sp=document.createElement('div'); sp.className='spinner'; el.appendChild(sp);
+}
+function setStepDone(i,msg){
+  const el=document.getElementById('step'+(i+1));
+  el.className='step done';
+  el.querySelector('.step-status').textContent=msg;
+  el.querySelector('.step-icon').textContent='✅';
+  const sp=el.querySelector('.spinner'); if(sp) sp.remove();
+}
+
+function newScan(){
+  currentFile=null;
+  document.getElementById('preview-img').style.display='none';
+  document.getElementById('upload-placeholder').style.display='flex';
+  document.getElementById('upload-zone').classList.remove('has-img');
+  document.getElementById('btn-send').disabled=true;
+  document.getElementById('file-input').value='';
+  document.getElementById('scan-error').classList.remove('show');
+  goTo('s-scan');
+}
+</script>
+</body>
+</html>
