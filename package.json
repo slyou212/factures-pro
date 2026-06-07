@@ -1,12 +1,11 @@
 {
   "name": "factures-pro",
   "version": "1.0.0",
-  "description": "Application interne de scan et classement de factures",
-  "main": "api/index.js",
   "type": "module",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
     "@azure/msal-node": "^2.9.0",
-    "@microsoft/microsoft-graph-client": "^3.0.7"
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@upstash/redis": "^1.31.0"
   }
 }
