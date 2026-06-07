@@ -5,13 +5,11 @@ import { Redis } from '@upstash/redis';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── REDIS (stockage permanent des tokens) ──
 const redis = new Redis({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
 });
 
-// ── MSAL OneDrive ──
 const msalApp = new ConfidentialClientApplication({
   auth: {
     clientId: process.env.AZURE_CLIENT_ID,
@@ -42,8 +40,54 @@ async function getOneDriveClient() {
   });
 }
 
+// Parse multipart form data
+async function parseMultipart(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const buffer = Buffer.concat(chunks);
+  const contentType = req.headers['content-type'] || '';
+  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+  if (!boundaryMatch) throw new Error('Pas de boundary multipart');
+  const boundary = boundaryMatch[1];
+
+  const parts = [];
+  const boundaryBuf = Buffer.from('--' + boundary);
+  let pos = 0;
+
+  while (pos < buffer.length) {
+    const boundaryPos = buffer.indexOf(boundaryBuf, pos);
+    if (boundaryPos === -1) break;
+    pos = boundaryPos + boundaryBuf.length;
+    if (buffer[pos] === 45 && buffer[pos+1] === 45) break; // --
+    if (buffer[pos] === 13) pos += 2; // \r\n
+
+    // Lire les headers
+    const headerEnd = buffer.indexOf(Buffer.from('\r\n\r\n'), pos);
+    if (headerEnd === -1) break;
+    const headerStr = buffer.slice(pos, headerEnd).toString();
+    pos = headerEnd + 4;
+
+    // Trouver la fin du contenu
+    const nextBoundary = buffer.indexOf(boundaryBuf, pos);
+    const contentEnd = nextBoundary === -1 ? buffer.length : nextBoundary - 2;
+    const content = buffer.slice(pos, contentEnd);
+    pos = nextBoundary === -1 ? buffer.length : nextBoundary;
+
+    // Extraire le nom et content-type
+    const nameMatch = headerStr.match(/name="([^"]+)"/);
+    const ctMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
+    if (nameMatch) {
+      parts.push({
+        name: nameMatch[1],
+        contentType: ctMatch ? ctMatch[1].trim() : 'text/plain',
+        data: content
+      });
+    }
+  }
+  return parts;
+}
+
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   const url = req.url.split('?')[0];
 
@@ -91,16 +135,16 @@ export default async function handler(req, res) {
         <html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#0f0f11;color:#f0eff4">
           <div style="font-size:48px">✅</div>
           <h2>OneDrive connecté avec succès !</h2>
-          <p style="color:#7a7a8a">Vous pouvez fermer cette page et retourner à l'application.</p>
+          <p style="color:#7a7a8a">Vous pouvez fermer cette page.</p>
           <a href="/" style="display:inline-block;margin-top:20px;padding:12px 24px;background:#6c63ff;color:white;border-radius:12px;text-decoration:none">Retour à l'app</a>
         </body></html>
       `);
     } catch(err) {
-      return res.status(500).send(`<html><body style="font-family:sans-serif;text-align:center;padding:60px">
+      return res.status(500).send(`<html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#0f0f11;color:#f0eff4">
         <div style="font-size:48px">❌</div>
         <h2>Erreur de connexion</h2>
-        <p>${err.message}</p>
-        <a href="/api/auth">Réessayer</a>
+        <p style="color:#ef4444">${err.message}</p>
+        <a href="/api/auth" style="color:#6c63ff">Réessayer</a>
       </body></html>`);
     }
   }
@@ -108,38 +152,23 @@ export default async function handler(req, res) {
   // ── POST /api/analyser ──
   if (url === '/api/analyser' && req.method === 'POST') {
     try {
-      const chunks = [];
-      for await (const chunk of req) chunks.push(chunk);
-      const buffer = Buffer.concat(chunks);
-      const boundary = req.headers['content-type'].split('boundary=')[1];
-      const parts = buffer.toString('binary').split('--' + boundary);
-      let imageBase64 = null, imageType = 'image/jpeg';
+      const parts = await parseMultipart(req);
+      const imagePart = parts.find(p => p.name === 'image');
+      if (!imagePart) return res.status(400).json({ error: 'Image manquante' });
 
-      for (const part of parts) {
-        if (part.includes('name="image"')) {
-          const headerEnd = part.indexOf('\r\n\r\n');
-          if (headerEnd > -1) {
-            const headers = part.substring(0, headerEnd);
-            const match = headers.match(/Content-Type: ([^\r\n]+)/);
-            if (match) imageType = match[1].trim();
-            const rawData = part.substring(headerEnd + 4, part.lastIndexOf('\r\n'));
-            imageBase64 = Buffer.from(rawData, 'binary').toString('base64');
-          }
-        }
-      }
-
-      if (!imageBase64) return res.status(400).json({ error: 'Image manquante' });
+      const imageBase64 = imagePart.data.toString('base64');
+      const imageType = imagePart.contentType || 'image/jpeg';
 
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5',
-        max_tokens: 500,
+        max_tokens: 600,
         messages: [{
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: imageType, data: imageBase64 } },
-            { type: 'text', text: `Analyse cette facture ou ce ticket de caisse. Réponds UNIQUEMENT avec ce JSON, sans texte avant ou après :
+            { type: 'text', text: `Analyse cette facture ou ticket de caisse. Réponds UNIQUEMENT avec ce JSON sans texte avant ou après :
 {
-  "montant": "montant TTC avec symbole € ex: 47,80 €",
+  "montant": "montant TTC avec € ex: 47,80 €",
   "date": "date au format JJ/MM/AAAA",
   "tva": "montant TVA avec € si visible sinon null",
   "fournisseur": "nom du fournisseur ou magasin",
@@ -157,8 +186,13 @@ export default async function handler(req, res) {
         result = { montant: 'Non lisible', date: 'Non lisible', tva: null, fournisseur: 'Inconnu', description: 'facture' };
       }
 
+      // Stocker l'image temporairement dans Redis (5 min)
+      await redis.setex('temp_image', 300, imageBase64);
+      await redis.setex('temp_image_type', 300, imageType);
+
       return res.json(result);
     } catch(err) {
+      console.error('Erreur analyse:', err);
       return res.status(500).json({ error: err.message });
     }
   }
@@ -166,7 +200,7 @@ export default async function handler(req, res) {
   // ── POST /api/onedrive ──
   if (url === '/api/onedrive' && req.method === 'POST') {
     try {
-      const { societe, mode_paiement, montant, date, description, fournisseur } = req.body;
+      const { societe, mode_paiement, montant, date, tva, fournisseur, description } = req.body;
       const client = await getOneDriveClient();
 
       const now = new Date();
@@ -176,19 +210,43 @@ export default async function handler(req, res) {
       const dateTag = date ? date.replace(/\//g, '-') : now.toISOString().slice(0, 10);
       const montantTag = montant ? montant.replace(/[^0-9,\.]/g, '').replace(',', '.') : '0';
       const descTag = (description || 'facture').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 20);
-      const fileName = `${dateTag}_${modeTag}_${montantTag}EUR_${descTag}_meta.json`;
-      const filePath = `/me/drive/root:/Factures/${slug}/${month}/${fileName}:/content`;
+      const baseName = `${dateTag}_${modeTag}_${montantTag}EUR_${descTag}`;
+      const folderPath = `/Factures/${slug}/${month}`;
 
+      // ── Créer les dossiers ──
+      try { await client.api('/me/drive/root:/Factures:/children').post({ name: slug, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }); } catch(e) {}
+      try { await client.api(`/me/drive/root:/Factures/${slug}:/children`).post({ name: month, folder: {}, '@microsoft.graph.conflictBehavior': 'fail' }); } catch(e) {}
+
+      // ── 1. Uploader la photo ──
+      const imageBase64 = await redis.get('temp_image');
+      const imageType = await redis.get('temp_image_type') || 'image/jpeg';
+      if (imageBase64) {
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        const ext = imageType.includes('png') ? 'png' : 'jpg';
+        const photoPath = `/me/drive/root:${folderPath}/${baseName}_photo.${ext}:/content`;
+        await client.api(photoPath).put(imageBuffer);
+      }
+
+      // ── 2. Uploader le JSON avec toutes les infos ──
       const meta = {
-        societe, mode_paiement, montant, date, tva: req.body.tva,
-        fournisseur, description,
+        societe,
+        mode_paiement,
+        montant,
+        date,
+        tva,
+        fournisseur,
+        description,
         uploaded_at: new Date().toISOString(),
         uploaded_by: 'Factures Pro App'
       };
+      const metaPath = `/me/drive/root:${folderPath}/${baseName}_infos.json:/content`;
+      await client.api(metaPath).put(Buffer.from(JSON.stringify(meta, null, 2)));
 
-      await client.api(filePath).put(Buffer.from(JSON.stringify(meta, null, 2)));
+      // Nettoyer Redis
+      await redis.del('temp_image');
+      await redis.del('temp_image_type');
 
-      return res.json({ ok: true, path: `/Factures/${slug}/${month}/${fileName}` });
+      return res.json({ ok: true, path: `${folderPath}/${baseName}` });
     } catch(err) {
       console.error('OneDrive error:', err);
       return res.status(500).json({ error: err.message });
