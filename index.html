@@ -228,8 +228,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   </div>
 
   <!-- Zone ajout photo (cachée si 4 photos) -->
-  <div class="empty-photos" id="add-zone" onclick="document.getElementById('file-input').click()">
-    <input type="file" id="file-input" accept="image/*" capture="environment" onchange="handleFile(event)">
+  <div class="empty-photos" id="add-zone">
+    <input type="file" id="file-input" accept="image/*" capture="environment">
     <div style="font-size:36px;opacity:.4;margin-bottom:8px">📷</div>
     <div style="font-size:14px;font-weight:500">Photographier</div>
     <div style="font-size:12px;color:var(--muted);margin-top:4px">Ticket de caisse ou facture A4</div>
@@ -415,12 +415,13 @@ function setMode(el,mode){
 }
 
 function handleFile(e){
-  const file=e.target.files[0]; if(!file) return;
-  if(currentFiles.length>=4){alert('Maximum 4 photos par facture');return;}
-  currentFiles.push(file);
-  e.target.value='';
+  const files = e.target.files;
+  if(!files||!files.length) return;
+  for(let i=0;i<files.length;i++){
+    if(currentFiles.length>=4) break;
+    currentFiles.push(files[i]);
+  }
   renderPhotosGrid();
-  document.getElementById('btn-send').disabled=false;
 }
 
 function renderPhotosGrid(){
@@ -429,26 +430,45 @@ function renderPhotosGrid(){
   const count=currentFiles.length;
   document.getElementById('photos-count-txt').textContent=count+' / 4';
 
-  grid.innerHTML=currentFiles.map((f,i)=>{
-    const url=URL.createObjectURL(f);
-    return `<div class="photo-thumb">
-      <img src="${url}" alt="page ${i+1}">
-      <button class="del-btn" onclick="removePhoto(${i})">✕</button>
-    </div>`;
-  }).join('');
+  // Vider la grille
+  grid.innerHTML='';
 
-  // Ajouter le bouton + si moins de 4 photos
-  if(count<4){
+  // Ajouter les miniatures
+  currentFiles.forEach((f,i)=>{
+    const url=URL.createObjectURL(f);
+    const div=document.createElement('div');
+    div.className='photo-thumb';
+    div.innerHTML=`<img src="${url}" alt="page ${i+1}"><button class="del-btn" onclick="removePhoto(${i})">✕</button>`;
+    grid.appendChild(div);
+  });
+
+  // Bouton ajouter si moins de 4 et au moins 1 photo
+  if(count>0 && count<4){
     const btn=document.createElement('div');
     btn.className='add-photo-btn';
-    btn.innerHTML=`<input type="file" accept="image/*" capture="environment" onchange="handleFile(event)">📷<span>Ajouter</span>`;
-    if(count>0) grid.appendChild(btn);
+    const inp=document.createElement('input');
+    inp.type='file';
+    inp.accept='image/*';
+    inp.setAttribute('capture','environment');
+    inp.addEventListener('change', handleFile);
+    btn.appendChild(inp);
+    btn.insertAdjacentHTML('beforeend','📷<span>Ajouter</span>');
+    grid.appendChild(btn);
   }
 
   // Zone vide si 0 photos
   addZone.style.display=count===0?'block':'none';
   document.getElementById('btn-send').disabled=count===0;
 }
+
+// Init les écouteurs d'événements sur le fichier input principal
+document.addEventListener('DOMContentLoaded', function(){
+  const fi = document.getElementById('file-input');
+  if(fi){
+    fi.addEventListener('change', handleFile);
+    fi.addEventListener('click', function(e){ e.stopPropagation(); });
+  }
+});
 
 function removePhoto(i){
   currentFiles.splice(i,1);
@@ -542,7 +562,7 @@ function setStepDone(i,msg){
   const sp=el.querySelector('.spinner'); if(sp) sp.remove();
 }
 
-// Init grille
+// Init grille au chargement
 renderPhotosGrid();
 </script>
 </body>
